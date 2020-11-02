@@ -1,0 +1,72 @@
+import pandas as pd
+import os
+import datetime
+
+df=pd.DataFrame()
+
+cont = 1
+for filename in os.listdir('C:\\Users\\Lenovo\\Disney Wating times'):
+    if filename != '.ipynb_checkpoints': 
+        file = 'C:\\Users\\Lenovo\\Disney Wating times' +'\\'+filename
+        df1 = pd.read_excel(file)
+        if cont ==1:
+            df = df1
+            cont+=1
+        else:
+            df = pd.concat([df,df1],axis=0)
+            cont+=1
+            
+
+x = datetime.datetime.now()
+fecha= x.strftime("%d_%B")
+
+final_path = 'C:\\Users\\Lenovo\\Documents\\Disney Times Concatenated\\'+'concentrado '+fecha+'.xlsx'
+
+df.to_excel(final_path,index=False)
+
+df=pd.DataFrame()
+
+cont = 1
+for filename in os.listdir('C:\\Users\\Lenovo\\Universal Waiting Times'):
+    if filename != '.ipynb_checkpoints': 
+        file = 'C:\\Users\\Lenovo\\Universal Waiting Times\\' + filename
+        df1 = pd.read_excel(file)
+        if cont ==1:
+            df = df1
+            cont+=1
+        else:
+            df = pd.concat([df,df1],axis=0)
+            cont+=1
+            
+
+x = datetime.datetime.now()
+fecha= x.strftime("%d_%B")
+
+final_path = 'C:\\Users\\Lenovo\\Documents\\Universal Times Concatenated\\'+'Uconcentrado '+fecha+'.xlsx'
+
+df.to_excel(final_path,index=False)
+
+import shutil
+import os
+
+source = 'C:\\Users\\Lenovo\\Universal Waiting Times\\'
+dest1 = 'C:\\Users\\Lenovo\\WaitingTimes_historic\\'
+
+files = os.listdir(source)
+
+for filename in os.listdir('C:\\Users\\Lenovo\\Universal Waiting Times'):
+    if filename != '.ipynb_checkpoints': 
+        a = source + filename
+        b= dest1 + filename
+        shutil.move(a,b)
+
+source = 'C:\\Users\\Lenovo\\Disney Wating times\\'
+dest1 = 'C:\\Users\\Lenovo\\WaitingTimes_historic\\'
+
+files = os.listdir(source)
+
+for filename in os.listdir('C:\\Users\\Lenovo\\Disney Wating times'):
+    if filename != '.ipynb_checkpoints': 
+        a = source + filename
+        b= dest1 + filename
+        shutil.move(a,b)
