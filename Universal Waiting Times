@@ -1,0 +1,162 @@
+import time
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+from time import gmtime, strftime
+import json
+import openpyxl
+import schedule
+
+def job_Universal():    
+    hora1 = strftime("%d_%b %H,%M:%S")
+    source = requests.get('https://www.thrill-data.com/waits/park/uor/islands-of-adventure/').text
+    soup = BeautifulSoup(source, 'lxml')
+    soup.prettify() 
+    df = pd.DataFrame()
+    lista=[]
+    table=soup.find_all('ul', class_='main-list')
+    for tag in soup.find_all('li'):
+        lista.append(f'{tag.text}')
+    df=pd.DataFrame(lista)
+
+    pd.set_option('display.max_rows', 500)
+    univ_df = pd.DataFrame()
+    df.columns=['total']
+    for rows in df['total']:
+        if "(" in rows:
+            temp = pd.DataFrame([rows])
+            univ_df = pd.concat([univ_df,temp])
+    univ_df.columns=['total']
+
+    univ_df2=pd.DataFrame()
+    univ_df2[['atraccion','tiempo2']]= univ_df.total.str.split("(",expand=True) 
+    univ_df2[['tiempo','x']]= univ_df2.tiempo2.str.split(")",expand=True)
+    univ_df2=univ_df2.reset_index()
+    univ_df2=univ_df2.drop(['tiempo2','x','index'],axis=1)
+    univ_df2.to_excel('universal.xlsx')
+
+    source = requests.get('https://www.thrill-data.com/waits/park/uor/universal-studios/').text
+    soup = BeautifulSoup(source, 'lxml')
+    soup.prettify() 
+    df = pd.DataFrame()
+
+    lista_u=[]
+    table_u=soup.find_all('ul', class_='main-list')
+    for tag_u in soup.find_all('li'):
+        lista_u.append(f'{tag_u.text}')
+    df_u=pd.DataFrame(lista_u)
+
+    pd.set_option('display.max_rows', 500)
+    univ_df_u = pd.DataFrame()
+    df_u.columns=['total']
+    for rows_u in df_u['total']:
+        if "(" in rows_u:
+            temp_u = pd.DataFrame([rows_u])
+            univ_df_u = pd.concat([univ_df_u,temp_u])
+    univ_df_u.columns=['total']
+
+    univ_df2_u=pd.DataFrame()
+    univ_df2_u[['atraccion','tiempo2']]= univ_df_u.total.str.split("(",expand=True) 
+    univ_df2_u[['tiempo','x']]= univ_df2_u.tiempo2.str.split(")",expand=True)
+    univ_df2_u=univ_df2_u.reset_index()
+    univ_df2_u=univ_df2_u.drop(['tiempo2','x','index'],axis=1)
+    univ_df2_u.to_excel('universal.xlsx')
+    univ_df2_u
+
+    univ_island = pd.concat([univ_df2_u,univ_df2],ignore_index=True)
+
+    output = pd.DataFrame()
+    outputcolumns = ['Fecha','Hora','Dia','Feriado','Pandemia','temperatura','humedad','presion','reporte',
+                         "Dudley Do-Right's Ripsaw Falls","Hagrid's Magical Creatures Mot...","Camp Jurassic","Caro-Seuss-el"
+                         "Doctor Doom's Fearfall","Dudley Do-Right's Ripsaw Falls", "Flight of the Hippogriff",
+                         "Hagrid's Magical Creatures Mot...", "Harry Potter and the Forbidden...", 
+                         "Hogwarts Express - Hogsmeade S...", "If I Ran The Zoo", "Jurassic Park Discovery Center", 
+                         "Jurassic Park River Adventure", "Me Ship, The Olive", "One Fish, Two Fish, Red Fish, ...", 
+                         "Popeye & Bluto's Bilge-Rat Barges", "Poseidon's Fury", "Pteranodon Flyers", "Skull Island: Reign of Kong",
+                         "Storm Force Accelatron", "The Amazing Adventures of Spid...", "The Cat in The Hat",
+                         "The High in the Sky Seuss Trol...", "The Incredible Hulk Coaster", "Dudley Do-Right's Ripsaw Falls",
+                         "Hagrid's Magical Creatures Mot...", "The High in the Sky Seuss Trol...", 
+                         "Popeye & Bluto's Bilge-Rat Barges", "One Fish, Two Fish, Red Fish, ..."
+                    "Woody Woodpecker's Nuthouse Co...", "Harry Potter and the Escape fr...", "Curious George Goes to Town?", 
+                     "Despicable Me Minion Mayhem", "E.T. Adventure", "Fast & Furious - Supercharged", "Fievel's Playland", 
+                     "Harry Potter and the Escape fr...", "Hogwarts Express - King's Cros...", "Hollywood Rip Ride Rockit", 
+                     "Kang & Kodos' Twirl 'n' Hurl", "MEN IN BLACK Alien Attack", "Race Through New York Starring...", 
+                     "Revenge of the Mummy", "Shrek 4-D", "The Simpsons Ride", "TRANSFORMERS: The Ride-3D", 
+                     "Woody Woodpecker's Nuthouse Co...", "Depths of Fear", "Ghostbusters", "Graveyard Games", 
+                     "House of 1000 Corpses", "Killer Klowns From Outer Space", "Nightingales: Blood Pit", "Stranger Things",
+                     "Universal Monsters", "Us", "Yeti: Terror of the Yukon", "Woody Woodpecker's Nuthouse Co...", 
+                     "E.T. Adventure", "TRANSFORMERS: The Ride-3D", "MEN IN BLACK Alien Attack", "The Simpsons Ride"]
+
+    output['atracciones']=outputcolumns
+    output['tiempo']=""
+
+    #lleno mi template con la info que se obtuvo de ambos parques
+    contVS=0
+    for atraccionesVS in univ_island['atraccion']:
+        contO=0
+        for atraccionesO in output['atracciones']:
+            if atraccionesO in atraccionesVS:
+                output.iloc[contO,1]= univ_island.iloc[contVS,1]
+            else:
+                contO+=1
+        contVS+=1
+
+
+     # importing requests and json
+        CITY = "Orlando"
+        #API_KEY = "Your API Key"
+        # upadting the URL
+        URL = 'http://api.openweathermap.org/data/2.5/weather?q=Orlando,US&appid=fa79dae9eacd4efa61b418fa66017c11&units=metric'
+        # HTTP request
+        response = requests.get(URL)
+        if response.status_code == 200:
+           # getting data in the json format
+           data = response.json()
+           # getting the main dict block
+           main = data['main']
+           # getting temperature
+           temperature = main['temp']
+           # getting the humidity
+           humidity = main['humidity']
+           # getting the pressure
+           pressure = main['pressure']
+           # weather report
+           report = data['weather']
+        else:
+           # showing the error message
+           print("Error in the HTTP request")
+
+        output.iloc[5,1]=temperature
+        output.iloc[6,1]=humidity
+        output.iloc[7,1]=pressure
+        output.iloc[8,1]=report[0]['description']
+
+        output.iloc[0,1] = strftime("%m/%d/%Y")
+        h = strftime("%H:%M")
+        h = h[:-1]
+        h = h + '0'
+        output.iloc[1,1] = h
+        output.iloc[2,1] = strftime("%w")
+
+        output_transpuesto = output.T
+
+    output_transpuesto
+
+    new_header = output_transpuesto.iloc[0] #grab the first row for the header
+    output_transpuesto = output_transpuesto[1:] #take the data less the header row
+    output_transpuesto.columns = new_header #set the header row as the df header
+
+    horafin = strftime("%d_%b %H,%M:%S")
+    hora2 = strftime("%d_%b %H,%M")
+    hora3 = hora2[:-1]
+    hora3 = hora3 + '0'
+    date = 'Universal Waiting Times/universal_wait_times  '+ hora3 + '.xlsx'
+    output_transpuesto.to_excel(date, encoding = 'utf-8')
+    print(hora1,horafin)
+
+job_Universal()
+    
+schedule.every(10).minutes.do(job_Universal)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
