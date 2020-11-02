@@ -1,0 +1,130 @@
+import schedule
+import time
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+from time import gmtime, strftime
+import json 
+
+def job():
+    source = requests.get('https://www.wdwstats.com/wdw/attractions').text
+    soup = BeautifulSoup(source, 'lxml')
+    soup.prettify() 
+    df = pd.DataFrame()
+
+    table_body=soup.find('tbody')
+    rows = table_body.find_all('tr')
+    for row in rows:
+        cols=row.find_all('td')
+        cols=[x.text.strip() for x in cols]
+        temp = pd.DataFrame([cols])
+        df = pd.concat([df,temp])
+
+    #poner las 2 columnas en 1 sola
+    nuevo=pd.DataFrame()
+    nuevo['0']=df[3]
+    nuevo['1']=df[4]
+    df= df[[0,1]]
+    verticalStack=pd.DataFrame()
+    df.columns=['atraccion','tiempo']
+    nuevo.columns=['atraccion','tiempo']
+    verticalStack = pd.concat([df,nuevo],axis=0)
+    verticalStack.reset_index()
+    
+    #creo un molde del archivo final con el nombre de cada atraccion 
+    output = pd.DataFrame()
+    outputcolumns = ['Fecha','Hora','Dia','Feriado','Pandemia','temperatura','humedad','presion','reporte',
+                'Pirates of the Caribbean','Splash Mountain','Big Thunder Mountain Railroad','Seven Dwarfs Mine Train',
+                 'Space Mountain','Jungle Cruise','Astro Orbiter','Kali River Rapids',"Mickey's PhilharMagic",
+                 "Avatar Flight of Passage","Buzz Lightyear's Space Ranger Spin","DINOSAUR","Dumbo the Flying Elephant",
+                 "Expedition Everest - Legend of the Forbidden Mountain","Haunted Mansion","it's a small world",
+                 "It's Tough to be a Bug!","Kilimanjaro Safaris","Mad Tea Party","Na'vi River Journey",
+                 "Peter Pan's Flight","Prince Charming Regal Carrousel","The Barnstormer","The Magic Carpets of Aladdin",
+                 "The Many Adventures of Winnie the Pooh","Tomorrowland Speedway","TriceraTop Spin",
+                 "Under the Sea ~ Journey of The Little Mermaid","Walt Disney's Carousel of Progress",
+                 "A Pirate's Adventure ~ Treasures of the Seven Seas","Alien Swirling Saucers","Awesome Planet",
+                 "Beauty and the Beast Sing-Along","Canada Far and Wide in Circle-Vision 360",
+                 "Disney and Pixar Short Film Festival","Enchanted Tales with Belle","Frozen Ever After",
+                 "Gran Fiesta Tour Starring The Three Caballeros","Impressions de France",
+                 "Journey Into Imagination With Figment","Lightning McQueen's Racing Academy","Living with the Land",
+                 "Main Street Vehicles","Mickey & Minnie's Runaway Railway","Millennium Falcon: Smugglers Run",
+                 "Mission: SPAC","Monsters, Inc. Laugh Floor","MuppetVision 3D","Primeval Whirl","Reflections of China",
+                 "Rock 'n' Roller Coaster Starring Aerosmith","Slinky Dog Dash","Soarin' Around the World",
+                 "Spaceship Earth","Star Tours – The Adventures Continue","Star Wars Launch Bay Theater",
+                 "Star Wars: Rise of the Resistance","Test Track","The American Adventure","The Boneyard",
+                 "The Seas with Nemo & Friends","The Twilight Zone Tower of Terror",
+                 "Tomorrowland Transit Authority PeopleMover","Toy Story Mania!","Turtle Talk With Crush",
+                 "Vacation Fun - An Original Animated Short with Mickey & Minnie","Walt Disney Presents"]
+    output['atracciones']=outputcolumns
+    output['tiempo']=""
+    
+    #lleno mi template con la info que se obtuvo
+    contVS=0
+    for atraccionesVS in verticalStack['atraccion']:
+        contO=0
+        for atraccionesO in output['atracciones']:
+            if atraccionesVS == atraccionesO:
+                output.iloc[contO,1]= verticalStack.iloc[contVS,1]
+            else:
+                contO+=1
+        contVS+=1
+     
+
+    # importing requests and json
+    CITY = "Orlando"
+    #API_KEY = "Your API Key"
+    # upadting the URL
+    URL = 'http://api.openweathermap.org/data/2.5/weather?q=Orlando,US&appid=fa79dae9eacd4efa61b418fa66017c11&units=metric'
+    # HTTP request
+    response = requests.get(URL)
+    if response.status_code == 200:
+       # getting data in the json format
+       data = response.json()
+       # getting the main dict block
+       main = data['main']
+       # getting temperature
+       temperature = main['temp']
+       # getting the humidity
+       humidity = main['humidity']
+       # getting the pressure
+       pressure = main['pressure']
+       # weather report
+       report = data['weather']
+    else:
+       # showing the error message
+       print("Error in the HTTP request")
+    
+    output.iloc[5,1]=temperature
+    output.iloc[6,1]=humidity
+    output.iloc[7,1]=pressure
+    output.iloc[8,1]=report[0]['description']
+    
+    output.iloc[0,1] = strftime("%m/%d/%Y")
+    hora = strftime("%H:%M")
+    hora = hora[:-1]
+    hora = hora + '0'
+    output.iloc[1,1] = hora 
+    output.iloc[2,1] = strftime("%w")
+
+    output_transpuesto = output.T
+
+    new_header = output_transpuesto.iloc[0] #grab the first row for the header
+    output_transpuesto = output_transpuesto[1:] #take the data less the header row
+    output_transpuesto.columns = new_header #set the header row as the df header
+    
+
+    hora = strftime("%d_%b %H,%M")
+    horaPrnt = hora
+    hora = hora[:-1]
+    hora = hora + '0'
+    hora
+    date = 'Disney Wating times/timesdisney_waits '+ hora + '.xlsx'
+    output_transpuesto.to_excel(date, encoding = 'utf-8')
+    print(horaPrnt)
+
+job()
+    
+schedule.every(10).minutes.do(job)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
